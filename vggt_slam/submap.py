@@ -92,6 +92,15 @@ class Submap:
                 raise ValueError(f"No number found in image name: {filename}")
         self.frame_ids = frame_ids
 
+    def set_frame_ids_modi(self, file_paths):
+        """
+        Assign id based on list index
+
+        Note: This does not include any of the loop closure frames.
+        """
+        frame_ids = [i for i, _ in enumerate(file_paths)]
+        self.frame_ids = frame_ids
+
     def set_last_non_loop_frame_index(self, last_non_loop_frame_index):
         self.last_non_loop_frame_index = last_non_loop_frame_index
 
