@@ -9,7 +9,7 @@ import viser.transforms as viser_tf
 from termcolor import colored
 
 from vggt.utils.geometry import closed_form_inverse_se3, unproject_depth_map_to_point_map
-from vggt.utils.load_fn import load_and_preprocess_images
+from vggt.utils.load_fn import load_and_preprocess_images, load_and_preprocess_images_square
 from vggt.utils.pose_enc import pose_encoding_to_extri_intri
 
 from vggt_slam.loop_closure import ImageRetrieval
@@ -383,6 +383,7 @@ class Solver:
     def run_predictions(self, image_names, model, max_loops):
         device = "cuda" if torch.cuda.is_available() else "cpu"
         images = load_and_preprocess_images(image_names).to(device)
+        # images, _ = load_and_preprocess_images_square(image_names, target_size=1080).to(device)
         print(f"Preprocessed images shape: {images.shape}")
 
         # print("Running inference...")
@@ -427,4 +428,4 @@ class Solver:
             if isinstance(predictions[key], torch.Tensor):
                 predictions[key] = predictions[key].cpu().numpy().squeeze(0)  # remove batch dimension and convert to numpy
 
-        return predictions
+        return predictions, [images.shape[-2], images.shape[-1]]
