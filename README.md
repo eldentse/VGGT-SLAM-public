@@ -85,7 +85,7 @@ unzip office_loop.zip
 and then run the below command:
 
 ```
-python3 main.py --image_folder office_loop --max_loops 1 --vis_map
+python3 main.py --image_folder office_loop --max_loops 1 --vis_map --log_results --log_path "outputs/office_loops/pose.txt" 
 ```
 
 <p align="center">

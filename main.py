@@ -30,13 +30,16 @@ parser.add_argument("--max_loops", type=int, default=1, help="Maximum number of 
 parser.add_argument("--min_disparity", type=float, default=50, help="Minimum disparity to generate a new keyframe")
 parser.add_argument("--use_point_map", action="store_true", help="Use point map instead of depth-based points")
 parser.add_argument("--conf_threshold", type=float, default=25.0, help="Initial percentage of low-confidence points to filter out")
+parser.add_argument("--use_optical_flow_downsample", action="store_true", help="Use optical flow to downsample input frames")
+parser.add_argument("--image_width", type=int, default=1920, help="Image width")
+parser.add_argument("--image_height", type=int, default=1080, help="Image height")
 
 def main():
     """
     Main function that wraps the entire pipeline of VGGT-SLAM.
     """
     args = parser.parse_args()
-    use_optical_flow_downsample = True
+    use_optical_flow_downsample = args.use_optical_flow_downsample
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
 
@@ -69,6 +72,7 @@ def main():
 
     image_names_subset = []
     data = []
+    # image_data = []
     for image_name in tqdm(image_names):
         if use_optical_flow_downsample:
             img = cv2.imread(image_name)
@@ -81,9 +85,10 @@ def main():
         # Run submap processing if enough images are collected or if it's the last group of images.
         if len(image_names_subset) == args.submap_size + args.overlapping_window_size or image_name == image_names[-1]:
             print(image_names_subset)
-            predictions = solver.run_predictions(image_names_subset, model, args.max_loops)
+            predictions, new_image_size = solver.run_predictions(image_names_subset, model, args.max_loops)
 
             data.append(predictions["intrinsic"][:,0,0])
+            # image_data.append(new_image_size)
 
             solver.add_points(predictions)
 
@@ -108,13 +113,21 @@ def main():
         solver.update_all_submap_vis()
 
     if args.log_results:
-        solver.map.write_poses_to_file(args.log_path)
+        print('Logging pose file')
+        if not os.path.exists(args.log_path.replace("/pose.txt","")):
+            os.mkdir(args.log_path.replace("/pose.txt",""))
+        # solver.map.write_poses_to_file(args.log_path)
+        scale_factor = (args.image_width/new_image_size[1] + args.image_height/new_image_size[0])/2
+        print(f"Scale factor is {scale_factor}")
+        solver.map.write_poses_to_acezero_pose_file(args.log_path, image_names, data, scale_factor)
 
         # Log the full point cloud as one file, used for visualization.
-        # solver.map.write_points_to_file(args.log_path.replace(".txt", "_points.pcd"))
+        print('Logging point clouds')
+        solver.map.write_points_to_file(args.log_path.replace(".txt", "_points.pcd"))
 
         if not args.skip_dense_log:
             # Log the dense point cloud for each submap.
+            print('Logging dense logs')
             solver.map.save_framewise_pointclouds(args.log_path.replace(".txt", "_logs"))
 
     if args.plot_focal_lengths:
