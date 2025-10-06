@@ -87,6 +87,31 @@ class GraphMap:
                     quaternion = R.from_matrix(rotation_matrix).as_quat() # x, y, z, w
                     output = np.array([float(frame_id), x, y, z, *quaternion])
                     f.write(" ".join(f"{v:.8f}" for v in output) + "\n")
+    
+    def write_poses_to_acezero_pose_file(self, file_name, image_names, data, scale_factor):
+        outer_counter = 0 
+        with open(file_name, "w") as f:
+            for submap in self.ordered_submaps_by_key():
+                poses = submap.get_all_poses_world(ignore_loop_closure_frames=True)
+                frame_ids = submap.get_frame_ids()
+                focal_length_list = data[outer_counter]
+                outer_counter += 1
+                inner_counter = 0
+                assert len(poses) == len(frame_ids), "Number of provided poses and number of frame ids do not match"
+                for frame_id, pose in zip(frame_ids, poses):
+                    pose = np.linalg.inv(pose)
+                    x, y, z = pose[0:3, 3]
+                    rotation_matrix = pose[0:3, 0:3]
+                    quaternion = R.from_matrix(rotation_matrix).as_quat() # x, y, z, w
+
+                    rgb_file = image_names[int(frame_id)]
+                    focal_length = focal_length_list[inner_counter]*scale_factor
+                    inner_counter += 1
+                    # write to pose file in this format -> filename qw qx qy qz x y z focal_length confidence
+                    pose_str = f"{rgb_file} " \
+                        f"{quaternion[3]} {quaternion[0]} {quaternion[1]} {quaternion[2]} " \
+                        f"{x} {y} {z} {focal_length} {2000}\n"
+                    f.write(pose_str)
 
     def save_framewise_pointclouds(self, file_name):
         os.makedirs(file_name, exist_ok=True)
