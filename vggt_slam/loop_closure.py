@@ -73,7 +73,13 @@ class ImageRetrieval:
     def get_all_submap_embeddings(self, submap):
         # Frames is np array of shape (S, 3, H, W)
         frames = submap.get_all_frames()
-        return self.get_batch_descriptors(frames)
+        chunk_size = 10
+        result = []
+        for i in range(0, frames.shape[0], chunk_size):
+            batch = frames[i:i+chunk_size]  # shape will be (<=10, 3, H, W)
+            # print(f"Processing batch {i // chunk_size + 1}: shape {batch.shape}")
+            result.extend(self.get_batch_descriptors(batch))
+        return result
 
     def find_loop_closures(self, map, submap, max_similarity_thres = 0.80, max_loop_closures = 0): # TODO make these paramaters in a config file
         matches_queue = LoopMatchQueue(max_size=max_loop_closures)
